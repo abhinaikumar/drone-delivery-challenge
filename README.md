@@ -23,4 +23,5 @@ Execute - Inside target folder
 
 ``java -jar drone-delivery-challenge-0.0.1-SNAPSHOT-jar-with-dependencies.jar /Users/muthyalalaharini/eclipse-workspace/drone-delivery-challenge/input1.txt /Users/muthyalalaharini/eclipse-workspace/drone-delivery-challenge/output1.txt``
 
+![Design - Sequence Diagram](DroneDelivery_Seq_Diagram.png)
 

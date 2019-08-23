@@ -40,8 +40,6 @@ public class DroneDeliveryApplication {
 		} else {
 			orderLines = InputOrders.getOrdersFromFile(inputFilePath);
 			outputFilePath = output;
-//			System.out.println("Invalid Arguments");
-//			return;
 		}
 
 		// Create tasks queue to store incoming orders

@@ -35,31 +35,40 @@ public class DroneDeliveryScheduler {
 	public final static int NEUTRAL = 3;
 	public final static int DETRACTORS = 3;
 
+	/**
+	 * Schedule the order, store timestamps and calculate NPS
+	 * @param orders
+	 */
 	public void schedule(Queue<Order> orders) {
 		// Edge case: if there is no orders then return
 		if (orders.isEmpty())
 			return;
+		// Add all orders to queue for processing
 		queue.addAll(orders);
 
 		while (!queue.isEmpty()) {
+			//check if order is within time range and can be completed before end time
 			if (queue.peek().getOrderTimeStamp().isAfter(END_TIME) || !canDeliverBeforeEndTime()) {
 				queue.remove();
 				continue;
 			}
 			// Process current order
 			Order order = queue.poll();
-			System.out.println(order.getOrderID());
+			//Create delivery object for each order to record timestamps
 			OrderDelivery orderDelivery = new OrderDelivery(order.getOrderID());
 			orderDelivery.setOrderCreatedTime(order.getOrderTimeStamp());
 			if (this.droneReturnTime != null) {
+				//set the previous order return time as departure time of current order
 				orderDelivery.setOrderDepartureTime(this.droneReturnTime);
 			} else if (order.getOrderTimeStamp().isAfter(START_TIME)) {
 				orderDelivery.setOrderDepartureTime(order.getOrderTimeStamp());
 			} else {
+				//orders arrived before start time
 				orderDelivery.setOrderDepartureTime(START_TIME);
 			}
 			orderDelivery
 					.setOrderDeliveredTime(orderDelivery.getOrderDepartureTime().plus(durationToReachOrder(order)));
+			//return time would be drone reaching the warehouse after order delivered
 			this.droneReturnTime = orderDelivery.getOrderDepartureTime().plus(durationToReachOrder(order))
 					.plus(durationToReturnWareHouse(order));
 			calculateNPS(orderDelivery);
@@ -68,6 +77,11 @@ public class DroneDeliveryScheduler {
 		}
 	}
 
+	/**
+	 * Calculate Net Promoter Score
+	 * @param orderDelivery
+	 * @return
+	 */
 	private Rating calculateNPS(OrderDelivery orderDelivery) {
 		Rating rating = getRating(Duration
 				.between(orderDelivery.getOrderCreatedTime(), orderDelivery.getOrderDeliveredTime()).toHours());
@@ -78,6 +92,9 @@ public class DroneDeliveryScheduler {
 		return rating;
 	}
 
+	/**
+	 * @return true/false - can be delivered before end time
+	 */
 	private boolean canDeliverBeforeEndTime() {
 
 		Order order = queue.peek();
@@ -95,23 +112,21 @@ public class DroneDeliveryScheduler {
 	}
 
 	/**
-	 * @return minutes a drone will take to go from factory to order location
+	 * @return duration in minutes drone takes to go from factory to order location
 	 */
 	private Duration durationToReachOrder(Order order) {
 		return Duration.ofMinutes(order.getDistance());
 	}
 
 	/**
-	 * @return minutes a drone will take to go from factory to order location
+	 * @return duration in minutes drone reaches back warehouse after delivering order
 	 */
 	private Duration durationToReturnWareHouse(Order order) {
 		return Duration.ofMinutes(order.getDistance());
 	}
 
 	/**
-	 * @return minutes to fulfill an order, which is defined as minutes required to:
-	 *         go from factory (pick up order), deliver at order location, come back
-	 *         to factory
+	 * @return duration minutes to fulfill an order, duration to reach order location plus return back to warehouse
 	 */
 	private Duration durationToFulfillOrder(Order order) {
 		Duration durationToReachOrder = durationToReachOrder(order);
@@ -119,16 +134,15 @@ public class DroneDeliveryScheduler {
 	}
 
 	/**
-	 * Calculate which category the watingTime belongs to. All the calculations are
-	 * second based.
+	 * Categorize the ratings to the orders based on waitTime
 	 * 
-	 * @param waitingTime in seconds
-	 * @return category, including "Invalid", "Promoters", "Neutral", "Detractors".
+	 * @param waitTime in seconds
+	 * @return rating result "Promoters", "Neutral", "Detractors".
 	 */
-	private static Rating getRating(long waitingTime) {
-		if (waitingTime <= PROMOTERS) // shorter than 1 hour
+	private static Rating getRating(long waitTime) {
+		if (waitTime <= PROMOTERS) // shorter than 1 hour
 			return Rating.PROMOTERS;
-		else if (waitingTime <= NEUTRAL) // shorter than 3 hours
+		else if (waitTime <= NEUTRAL) // shorter than 3 hours and more than 1 hour
 			return Rating.NEUTRAL;
 		else
 			return Rating.DETRACTORS;
@@ -138,6 +152,9 @@ public class DroneDeliveryScheduler {
 		return deliveredOrders;
 	}
 
+	/**
+	 * @return calculate NPS score based on number of orders delivered and ratings
+	 */
 	public double getNPSScore() {
 		return getDeliveredOrders().size() > 0 ? ((promoters - detractors) / (double) getDeliveredOrders().size()) * 100
 				: 0;
